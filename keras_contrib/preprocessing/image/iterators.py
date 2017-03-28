@@ -12,15 +12,15 @@ class XYIterator(Iterator):
     Generate minibatches of image and mask
 
    # Arguments
-        xy_provider: infinit or finit generator function that provides image and mask with `yield`, e.g. `yield X, Y`. 
+        xy_provider: infinite or finite generator function that provides image and mask with `yield`, e.g. `yield X, Y`. 
         Optionally, `xy_provider` can yield (x, y, additional_info), for example if some data id is need to be provided.
         Provided X, Y data should be 3D ndarrays of shape corresponding to `data_format`.
         See example below.
-        n: total number of different samples (images and masks) provided by `xy_provider`, even if generator is infinit.
+        n: total number of different samples (images and masks) provided by `xy_provider`, even if generator is infinite.
         image_data_generator: instance of ImageDataGenerator.
         Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
     
-    Example, a finit xy_provider 
+    Example, a finite xy_provider 
     ```
     def xy_provider(image_ids):
         for image_id in image_ids:
@@ -35,7 +35,7 @@ class XYIterator(Iterator):
             # yield image, mask, image_id
     ```
     
-    Example, an infinit xy_provider 
+    Example, an infinite xy_provider 
     ```
     def inf_xy_provider(image_ids):
         while 1:
@@ -55,7 +55,7 @@ class XYIterator(Iterator):
 
     def __init__(self, xy_provider, n, image_data_generator,
                  batch_size=32, shuffle=False, seed=None,
-                 data_format=None, test_mode=False):
+                 data_format=None):
 
         # Check xy_provider and store the first values
         if data_format is None:

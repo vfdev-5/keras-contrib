@@ -22,11 +22,7 @@ class ImageMaskGenerator(ImageDataGenerator):
         pipeline: list of functions or str to specify transformations to apply on image.
         Each function should take as input x, y and return transformed x, y. Arguments x, y are 3D tensors,
         single image and single mask. Recognized `str` transformations : 'standardize', 'random_transform'.
-        Transformations like 'standardize', 'random_channel_shift' are not applied to the mask.
-        
-        test_mode: default False, class infinitly generates data by minibatches. 
-        If True, class iterates over all provided data by minibatches and stops when all data is 
-
+        Transformations like 'standardize', 'random_channel_shift' are not applied to the mask.        
 
         Other parameters are inherited from keras.preprocessing.image.ImageDataGenerator
 
@@ -35,7 +31,48 @@ class ImageMaskGenerator(ImageDataGenerator):
 
     Usage:
     ```
-    gen = ImageMaskGenerator(pipeline=(custom_func, 'standardize'))
+    def xy_provider(image_ids, infinite=True):
+        while True:
+            for image_id in image_ids:
+                image = load_image(image_id)
+                mask = load_mask(image_id)
+
+                # Some custom preprocesssing: resize
+                # ...
+                yield image, mask
+            if not infinite:
+                return 
+    
+    train_gen = ImageMaskGenerator(pipeline=('random_transform', 'standardize'),
+                             featurewise_center=True,
+                             featurewise_std_normalization=True,
+                             rotation_range=90., 
+                             width_shift_range=0.15, height_shift_range=0.15,
+                             shear_range=3.14/6.0,
+                             zoom_range=0.25,
+                             channel_shift_range=0.1,
+                             horizontal_flip=True,
+                             vertical_flip=True)
+    
+    train_gen.fit(xy_provider(train_image_ids, infinite=False),
+            len(train_image_ids), 
+            augment=True, 
+            save_to_dir=GENERATED_DATA,
+            batch_size=4,
+            verbose=1)
+
+    val_gen = ImageMaskGenerator() # Just an infinite image/mask generator
+
+    history = model.fit_generator(
+        train_gen.flow(xy_provider(train_image_ids), # Infinite generator is used
+                       len(train_id_type_list),
+                       batch_size=batch_size),
+        samples_per_epoch=samples_per_epoch,
+        nb_epoch=nb_epochs,
+        validation_data=val_gen.flow(xy_provider(val_image_ids), # Infinite generator is used
+                       len(val_image_ids),
+                       batch_size=batch_size),
+        nb_val_samples=nb_val_samples)
     ```
 
     """
@@ -222,7 +259,7 @@ class ImageMaskGenerator(ImageDataGenerator):
         """Fits internal statistics to some sample data.
 
         # Arguments
-            xy_provider: finit generator function that yields two 3D ndarrays image and mask of the same size.
+            xy_provider: finite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of samples provided by xy_provider
             See `XYIterator` for more details. No restrictions on number of channels.
             Other arguments are inherited from keras.preprocessing.image.ImageDataGenerator
@@ -346,8 +383,8 @@ class ImageMaskGenerator(ImageDataGenerator):
         Iterate over x, y provided by `xy_provider`
         
         # Arguments:
-            inf_xy_provider: infinit generator function that yields two 3D ndarrays image and mask of the same size.
-            n_samples: number of different samples provided by infinit generator `xy_provider`.
+            inf_xy_provider: infinite generator function that yields two 3D ndarrays image and mask of the same size.
+            n_samples: number of different samples provided by infinite generator `xy_provider`.
             See `XYIterator` for more details. No restrictions on number of channels.
         
         """
