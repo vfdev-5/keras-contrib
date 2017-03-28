@@ -9,6 +9,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing.image import random_channel_shift
 from keras.preprocessing.image import flip_axis, transform_matrix_offset_center, apply_transform
 from keras import backend as K
+from keras.utils.generic_utils import Progbar
 
 from .iterators import XYIterator
 
@@ -22,6 +23,10 @@ class ImageMaskGenerator(ImageDataGenerator):
         Each function should take as input x, y and return transformed x, y. Arguments x, y are 3D tensors,
         single image and single mask. Recognized `str` transformations : 'standardize', 'random_transform'.
         Transformations like 'standardize', 'random_channel_shift' are not applied to the mask.
+        
+        test_mode: default False, class infinitly generates data by minibatches. 
+        If True, class iterates over all provided data by minibatches and stops when all data is 
+
 
         Other parameters are inherited from keras.preprocessing.image.ImageDataGenerator
 
@@ -43,6 +48,17 @@ class ImageMaskGenerator(ImageDataGenerator):
         """
         """
         super(ImageMaskGenerator, self).__init__(**kwargs)
+        # Compatibility with keras version < 2
+        if hasattr(self, 'dim_ordering'):
+            self.data_format = 'channels_last' if self.dim_ordering == 'tf' else 'channels_first'     
+            if self.data_format == 'channels_first':
+                self.channel_axis = 1
+                self.row_axis = 2
+                self.col_axis = 3
+            if self.data_format == 'channels_last':
+                self.channel_axis = 3
+                self.row_axis = 1
+                self.col_axis = 2            
         self._create_pipeline(pipeline)
 
     def _create_pipeline(self, pipeline):
@@ -185,8 +201,8 @@ class ImageMaskGenerator(ImageDataGenerator):
         # Returns
             A transformed version of the inputs (same shape).
         """
-        xt = x.copy()
-        yt = y.copy()
+        xt = x.copy().astype(K.floatx())
+        yt = y.copy().astype(K.floatx())
         for t in self._pipeline:
             xt, yt = t(xt, yt)
         return xt, yt
@@ -197,54 +213,58 @@ class ImageMaskGenerator(ImageDataGenerator):
     def fit(self, xy_provider,
             n_samples,
             augment=False,
-            seed=None):
-            # save_to_dir=None,
-            # save_prefix='',
-            # save_format='npz'):
+            seed=None,
+            batch_size=16,
+            save_to_dir=None,
+            save_prefix='',
+            save_format='npz',
+            verbose=0):
         """Fits internal statistics to some sample data.
 
         # Arguments
-            xy_provider: generator function that yields two 3D ndarrays image and mask of the same size.
+            xy_provider: finit generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of samples provided by xy_provider
             See `XYIterator` for more details. No restrictions on number of channels.
-
-            n_samples: number of samples given by `xy_provider`
-
             Other arguments are inherited from keras.preprocessing.image.ImageDataGenerator
 
             Some of the code is copied from `fit` method of ImageDataGenerator
             https://github.com/fchollet/keras/blob/b4f7340cc9be4ce23c768c26a612df287c5bb883/keras/preprocessing/image.py
         """
-        # self.mean = None
-        # self.std = None
-        # self.principal_components = None
-        # if save_to_dir is not None:
-        #     # Load mean, std, principal_components if file exists
-        #     filename = os.path.join(save_to_dir, save_prefix + "fit_data." + save_format)
-        #     if os.path.exists(filename):
-        #         print('Load existing file: %s' % filename)
-        #         npzfile = np.load(filename)
-        #         computed_arrays = npzfile.files
-        #         needed_arrays = {'mean': (self.featurewise_center, self.mean),
-        #                          'std': (self.featurewise_std_normalization, self.std),
-        #                          'principal_components': (self.zca_whitening, self.principal_components)}
-        #         for arr_name in computed_arrays:
-        #             if needed_arrays[arr_name][0]:
-        #                 needed_arrays[arr_name][1] = npzfile[arr_name]
-        #
-        #         can_return = True
-        #         for key in needed_arrays:
-        #             if needed_arrays[key][0] and needed_arrays[key][1] is None:
-        #                 can_return = False
-        #                 break
-        #         if can_return:
-        #             return
-        #
-
+        self.mean = None
+        self.std = None
+        self.principal_components = None
+        
+        def _get_save_filename():
+            filename = save_prefix + "_stats." + save_format if len(save_prefix) > 0 else "stats." + save_format
+            return os.path.join(save_to_dir, filename)
+        
+        if save_to_dir is not None:
+            # Load mean, std, principal_components if file exists
+            filename = _get_save_filename()
+            if os.path.exists(filename):
+                print("Load existing file: %s" % filename)
+                npzfile = np.load(filename)
+                computed_arrays = npzfile.files
+                needed_arrays = {'mean': self.featurewise_center,
+                                 'std': self.featurewise_std_normalization,
+                                 'principal_components': self.zca_whitening}
+                can_return = True
+                for key in needed_arrays:
+                    if needed_arrays[key]:
+                        if key in computed_arrays:
+                            self.__setattr__(key, npzfile[key])
+                        else:
+                            can_return = False
+                            break
+                if can_return:
+                    print("No need to recompute statistics")
+                    return
+                # Remove existing file
+                os.remove(filename)
+        
         if not self.featurewise_center and not self.featurewise_std_normalization and not self.zca_whitening:
             return
 
-        batch_size = 4
         pipeline = tuple(self._pipeline)
         if augment:
             # Remove standardize transformation from the pipeline
@@ -262,8 +282,14 @@ class ImageMaskGenerator(ImageDataGenerator):
                                      batch_size=batch_size,
                                      seed=seed,
                                      data_format=self.data_format)
+            
+        
+        if verbose == 1:
+            progbar = Progbar(target=n_samples)
 
         counter = 0
+        if verbose == 1:
+            progbar.update(counter*batch_size)
         ret = next(xy_iterator)
         x = ret[0].astype(np.float64)
         ll = n_samples * x.shape[self.row_axis] * x.shape[self.col_axis]
@@ -275,7 +301,10 @@ class ImageMaskGenerator(ImageDataGenerator):
             _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
         counter += 1
 
+            
         for ret in xy_iterator:
+            if verbose == 1:
+                progbar.update(counter*batch_size)
             x = ret[0].astype(np.float64)
             if self.featurewise_center or self.featurewise_std_normalization:
                 self.mean += np.sum(x, axis=(0, self.row_axis, self.col_axis)) * 1.0 / ll
@@ -303,14 +332,25 @@ class ImageMaskGenerator(ImageDataGenerator):
             u, s, _ = linalg.svd(sigma)
             self.principal_components = np.dot(np.dot(u, np.diag(1. / np.sqrt(s + K.epsilon()))), u.T)
 
+        
         if augment:
+            # Restore pipeline to the initial
             self._pipeline = pipeline
+            
+        if save_to_dir is not None:
+            filename = _get_save_filename()
+            np.savez_compressed(filename, mean=self.mean, std=self.std, principal_components=self.principal_components)
 
-
-    def flow(self, xy_provider, n_samples, **kwargs):
+    def flow(self, inf_xy_provider, n_samples, **kwargs):
         """
         Iterate over x, y provided by `xy_provider`
+        
+        # Arguments:
+            inf_xy_provider: infinit generator function that yields two 3D ndarrays image and mask of the same size.
+            n_samples: number of different samples provided by infinit generator `xy_provider`.
+            See `XYIterator` for more details. No restrictions on number of channels.
+        
         """
-        return XYIterator(xy_provider, n_samples, self,
+        return XYIterator(inf_xy_provider, n_samples, self,
                           data_format=self.data_format,
                           **kwargs)

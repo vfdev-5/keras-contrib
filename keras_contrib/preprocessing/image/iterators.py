@@ -11,16 +11,16 @@ class XYIterator(Iterator):
     """
     Generate minibatches of image and mask
 
-    :param xy_provider: generator function that provides image and mask with `yield`, e.g. `yield X, Y`.
-    Optionally, `xy_provider` can yield (x, y, additional_info), for example if some data id is need to be provided.
-    Provided X, Y data should be 3D ndarrays of shape corresponding to `data_format`.
-    See example below.
-    :param n: total number of samples (images and masks) provided by `xy_provider`
-    :param image_data_generator: instance of ImageDataGenerator.
-    If None, class iterates over all provided data by minibatches. This option can be used in testing mode.
-    Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
-
-    Example, xy_provider
+   # Arguments
+        xy_provider: infinit or finit generator function that provides image and mask with `yield`, e.g. `yield X, Y`. 
+        Optionally, `xy_provider` can yield (x, y, additional_info), for example if some data id is need to be provided.
+        Provided X, Y data should be 3D ndarrays of shape corresponding to `data_format`.
+        See example below.
+        n: total number of different samples (images and masks) provided by `xy_provider`, even if generator is infinit.
+        image_data_generator: instance of ImageDataGenerator.
+        Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
+    
+    Example, a finit xy_provider 
     ```
     def xy_provider(image_ids):
         for image_id in image_ids:
@@ -34,11 +34,28 @@ class XYIterator(Iterator):
             # Or optionally:
             # yield image, mask, image_id
     ```
+    
+    Example, an infinit xy_provider 
+    ```
+    def inf_xy_provider(image_ids):
+        while 1:
+            for image_id in image_ids:
+                image = load_image(image_id)
+                mask = load_mask(image_id)
+
+                # Some custom preprocesssing: resize
+                # ...
+
+                yield image, mask
+                # Or optionally:
+                # yield image, mask, image_id
+    ```
+
     """
 
     def __init__(self, xy_provider, n, image_data_generator,
                  batch_size=32, shuffle=False, seed=None,
-                 data_format=None):
+                 data_format=None, test_mode=False):
 
         # Check xy_provider and store the first values
         if data_format is None:
@@ -46,11 +63,11 @@ class XYIterator(Iterator):
                 data_format = "channels_last" if K.image_dim_ordering() == "tf" else "channels_first"
             else:
                 data_format = K.image_data_format()
-        try:
-            ret = next(xy_provider)
-            assert isinstance(ret, list) or isinstance(ret, tuple) and 2 <= len(ret) <= 3
-        except Exception:
-            raise AssertionError("Generator xy_provider should yield a list of (image, mask) or (image, mask, info)")
+        
+        ret = next(xy_provider)
+        assert isinstance(ret, list) or isinstance(ret, tuple) and 2 <= len(ret) <= 3, \
+            "Generator xy_provider should yield a list/tuple of (image, mask) or (image, mask, info)"
+
         x, y, info = ret if len(ret) > 2 else (ret[0], ret[1], None)
         XYIterator._check_img_format(x, data_format)
         XYIterator._check_img_format(y, data_format)
