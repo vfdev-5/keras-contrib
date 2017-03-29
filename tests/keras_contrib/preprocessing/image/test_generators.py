@@ -2,11 +2,10 @@
 from __future__ import absolute_import
 import pytest
 
-import numpy as np
 from numpy.testing import assert_allclose
 from keras.utils.test_utils import keras_test
 
-from keras_contrib.preprocessing.image.generators import ImageMaskGenerator
+from keras_contrib.preprocessing.image.generators import ImageMaskGenerator, ImageDataGenerator
 
 from .test_iterators import random_provider, example_images_mean_std, example_provider_th
 
@@ -20,6 +19,19 @@ def _test_image_mask_generator(gen):
     for x, y in gen.flow(random_provider(n_samples, image_shape), n_samples, batch_size=batch_size):
         counter += batch_size
         assert_allclose(x, y)
+        assert x.shape[0] == batch_size
+        assert x.shape[1:] == image_shape
+    assert counter == n_samples
+
+
+def _test_image_data_generator(gen):
+    n_samples = 256
+    image_shape = (3, 128, 130)
+    batch_size = 16
+
+    counter = 0
+    for x, y in gen.flow(random_provider(n_samples, image_shape), n_samples, batch_size=batch_size):
+        counter += batch_size
         assert x.shape[0] == batch_size
         assert x.shape[1:] == image_shape
     assert counter == n_samples
@@ -58,6 +70,13 @@ def test_image_mask_generator_basic():
 
     gen = ImageMaskGenerator(data_format='channels_first')
     _test_image_mask_generator(gen)
+
+
+@keras_test
+def test_image_data_generator_basic():
+
+    gen = ImageDataGenerator(data_format='channels_first')
+    _test_image_data_generator(gen)
 
 
 @keras_test
@@ -174,26 +193,6 @@ def test_image_mask_generator_invalid_data():
                            shear_range=3.14 / 6.0,
                            horizontal_flip=True,
                            vertical_flip=True)
-
-    # Test flow with invalid data
-    with pytest.raises(AssertionError):
-        generator = ImageMaskGenerator(pipeline=('random_transform', 'standardize'),
-                                       rotation_range=90.,
-                                       zoom_range=0.5,
-                                       width_shift_range=0.2,
-                                       height_shift_range=0.2,
-                                       shear_range=3.14/6.0,
-                                       horizontal_flip=True,
-                                       vertical_flip=True)
-
-        def _bad_xy_provider():
-            pass
-
-        generator.flow(_bad_xy_provider(), 64, batch_size=16)
-
-
-
-
 
 if __name__ == '__main__':
     pytest.main([__file__])

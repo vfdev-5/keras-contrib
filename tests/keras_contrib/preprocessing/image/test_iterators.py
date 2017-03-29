@@ -6,7 +6,7 @@ from numpy.testing import assert_allclose
 
 from keras.utils.test_utils import keras_test
 
-from keras_contrib.preprocessing.image.iterators import XYIterator
+from keras_contrib.preprocessing.image.iterators import ImageDataIterator, ImageMaskIterator
 
 
 # A basic image/mask provider
@@ -50,15 +50,32 @@ def random_provider_with_info(n, shape):
 
 
 @keras_test
-def test_xy_iterator():
+def test_image_data_iterator():
     n_samples = 64
     image_shape = (3, 128, 128)
     image_data_generator = None
     batch_size = 16
-    xy_iterator = XYIterator(random_provider(n_samples, image_shape),
-                             n_samples, image_data_generator,
-                             batch_size, data_format='channels_first')
+    xy_iterator = ImageDataIterator(random_provider(n_samples, image_shape),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
+    counter = 0
+    for ret in xy_iterator:
+        x, y, info = ret if len(ret) == 3 else (ret[0], ret[1], None)
+        counter += batch_size
+        assert x.shape[0] == batch_size
+        assert x.shape[1:] == image_shape
+    assert counter == n_samples
 
+
+@keras_test
+def test_image_mask_iterator():
+    n_samples = 64
+    image_shape = (3, 128, 128)
+    image_data_generator = None
+    batch_size = 16
+    xy_iterator = ImageMaskIterator(random_provider(n_samples, image_shape),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
     counter = 0
     for ret in xy_iterator:
         x, y, info = ret if len(ret) == 3 else (ret[0], ret[1], None)
@@ -70,13 +87,32 @@ def test_xy_iterator():
 
 
 @keras_test
-def test_xy_iterator2():
+def test_image_data_iterator2():
     n_samples = 128
     image_data_generator = None
     batch_size = 16
-    xy_iterator = XYIterator(example_provider_th(n_samples),
-                             n_samples, image_data_generator,
-                             batch_size, data_format='channels_first')
+    xy_iterator = ImageDataIterator(example_provider_th(n_samples),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
+
+    counter = 0
+    for ret in xy_iterator:
+        x, y, info = ret if len(ret) == 3 else (ret[0], ret[1], None)
+        for i in range(batch_size):
+            assert_allclose(x[i, :, :, :], example_image(counter + i))
+        counter += batch_size
+        assert x.shape[0] == batch_size
+    assert counter == n_samples
+
+
+@keras_test
+def test_image_mask_iterator2():
+    n_samples = 128
+    image_data_generator = None
+    batch_size = 16
+    xy_iterator = ImageMaskIterator(example_provider_th(n_samples),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
 
     counter = 0
     for ret in xy_iterator:
@@ -90,14 +126,35 @@ def test_xy_iterator2():
 
 
 @keras_test
-def test_xy_iterator_with_info():
+def test_image_data_iterator_with_info():
     n_samples = 64
     image_shape = (3, 128, 128)
     image_data_generator = None
     batch_size = 16
-    xy_iterator = XYIterator(random_provider_with_info(n_samples, image_shape),
-                             n_samples, image_data_generator,
-                             batch_size, data_format='channels_first')
+    xy_iterator = ImageDataIterator(random_provider_with_info(n_samples, image_shape),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
+
+    counter = 0
+    for ret in xy_iterator:
+        x, y, info = ret if len(ret) == 3 else (ret[0], ret[1], None)
+        assert x.shape[0] == batch_size
+        assert x.shape[1:] == image_shape
+        assert info.shape[0] == batch_size
+        assert info[0] == (counter, "Type A")
+        counter += batch_size
+    assert counter == n_samples
+
+
+@keras_test
+def test_image_mask_iterator_with_info():
+    n_samples = 64
+    image_shape = (3, 128, 128)
+    image_data_generator = None
+    batch_size = 16
+    xy_iterator = ImageMaskIterator(random_provider_with_info(n_samples, image_shape),
+                                    n_samples, image_data_generator,
+                                    batch_size, data_format='channels_first')
 
     counter = 0
     for ret in xy_iterator:
@@ -109,7 +166,6 @@ def test_xy_iterator_with_info():
         assert info[0] == (counter, "Type A")
         counter += batch_size
     assert counter == n_samples
-
 
 if __name__ == '__main__':
     pytest.main([__file__])
