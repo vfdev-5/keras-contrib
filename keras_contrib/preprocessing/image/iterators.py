@@ -73,22 +73,32 @@ class ImageDataIterator(Iterator):
 
         x, y, info = ret if len(ret) > 2 else (ret[0], ret[1], None)
         self._check_x_format(x, data_format=data_format)
-        self._check_y_format(y, data_format=data_format)
+        if y is not None:
+            self._check_y_format(y, data_format=data_format)
         self._first_xy_provider_ret = (x, y, info)
 
         super(ImageDataIterator, self).__init__(n, batch_size, shuffle, seed)
 
         self.data_format = data_format
         self.xy_provider = xy_provider
+        self._process = None
+        self._image_data_generator = None
         self.image_data_generator = image_data_generator
 
-        if image_data_generator is None:
+    @property
+    def image_data_generator(self):
+        return self._image_data_generator
+
+    @image_data_generator.setter
+    def image_data_generator(self, generator):
+        self._image_data_generator = generator
+        if self._image_data_generator is None:
             self._process = self._empty_process
-        elif hasattr(image_data_generator, 'process'):
+        elif hasattr(self._image_data_generator, 'process'):
             self._process = self.image_data_generator.process
         else:
             self._process = self._default_image_data_generator_process
-            
+
     def _empty_process(self, img, target):
         return img, target
             
@@ -104,14 +114,15 @@ class ImageDataIterator(Iterator):
         #
         # Override this method when inherits of ImageDataIterator
         #
-        pass
+        assert isinstance(y, np.ndarray) and len(y.shape) == 1, "Y should be an ndarray, one-hot encoded vector"
     
     def _create_y_batch(self, current_batch_size, x, y):
         # Method to create a batch of y targets
+        # Assume that y is one-hot encoded
         #
         # Override this method when inherits of ImageDataIterator
         #
-        return np.empty((current_batch_size,), dtype=object)
+        return np.zeros((current_batch_size, ) + y.shape, dtype=y.dtype)
         
     @staticmethod
     def _check_img_format(img, data_format):
@@ -139,7 +150,8 @@ class ImageDataIterator(Iterator):
             x, y, info = ret if len(ret) > 2 else (ret[0], ret[1], None)
 
         batch_x = np.zeros((current_batch_size,) + x.shape, dtype=K.floatx())
-        batch_y = self._create_y_batch(current_batch_size, x=x, y=y)
+        batch_y = self._create_y_batch(current_batch_size, x=x, y=y) if y is not None \
+            else np.empty((current_batch_size, ), dtype=object)
         batch_info = np.empty((current_batch_size,), dtype=object)
         batch_x[0], batch_y[0] = self._process(x, y)
         batch_info[0] = info
@@ -148,7 +160,8 @@ class ImageDataIterator(Iterator):
             ret = next(self.xy_provider)
             x, y, info = ret if len(ret) > 2 else (ret[0], ret[1], None)
             self._check_x_format(x, data_format=self.data_format)
-            self._check_y_format(y, data_format=self.data_format)            
+            if y is not None:
+                self._check_y_format(y, data_format=self.data_format)
             batch_x[i + 1], batch_y[i + 1] = self._process(x, y)
             batch_info[i + 1] = info
 

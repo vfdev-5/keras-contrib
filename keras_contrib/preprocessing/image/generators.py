@@ -60,7 +60,12 @@ class ImageDataGenerator(KerasImageDataGenerator):
             batch_size=4,
             verbose=1)
 
-    val_gen = ImageDataGenerator() # Just an infinite image/mask generator
+    val_gen = ImageDataGenerator(featurewise_center=True,
+                                 featurewise_std_normalization=True) # Just an infinite image/mask generator
+
+    val_gen.mean = train_gen.mean
+    val_gen.std = train_gen.std
+    val_gen.principal_components = train_gen.principal_components
 
     history = model.fit_generator(
         train_gen.flow(xy_provider(train_image_ids), # Infinite generator is used
@@ -304,15 +309,10 @@ class ImageDataGenerator(KerasImageDataGenerator):
                 p = list(self._pipeline)
                 p.remove(self.standardize)
                 self._pipeline = tuple(p)
-            xy_iterator = ImageDataIterator(xy_provider, n_samples, self,
-                                            batch_size=batch_size,
-                                            seed=seed,
-                                            data_format=self.data_format)
+            xy_iterator = self.flow(xy_provider, n_samples, batch_size=batch_size, seed=seed)
         else:
-            xy_iterator = ImageDataIterator(xy_provider, n_samples, None,
-                                            batch_size=batch_size,
-                                            seed=seed,
-                                            data_format=self.data_format)
+            xy_iterator = self.flow(xy_provider, n_samples, batch_size=batch_size, seed=seed)
+            xy_iterator.image_data_generator = None
 
         if verbose == 1:
             progbar = Progbar(target=n_samples)
@@ -341,14 +341,20 @@ class ImageDataGenerator(KerasImageDataGenerator):
             if self.zca_whitening:
                 _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
             counter += 1
+            if counter > n_samples:
+                print("Warning. Data provider `xy_iterator` yields more samples than `n_samples`")
+                break
+
+        if verbose == 1:
+            progbar.update(n_samples)
 
         if self.featurewise_center or self.featurewise_std_normalization:
             self.std -= np.power(self.mean, 2.0)
             self.std = np.sqrt(self.std)
             broadcast_shape = [1, 1, 1]
             broadcast_shape[self.channel_axis - 1] = x.shape[self.channel_axis]
-            self.mean = np.reshape(self.mean, broadcast_shape)
-            self.std = np.reshape(self.std, broadcast_shape)
+            self.mean = np.reshape(self.mean, broadcast_shape) if self.featurewise_center else None
+            self.std = np.reshape(self.std, broadcast_shape) if self.featurewise_std_normalization else None
 
             if self.zca_whitening:
                 _total_x -= self.mean
@@ -372,7 +378,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
     def flow(self, inf_xy_provider, n_samples, **kwargs):
         """
         Iterate over x, y provided by `xy_provider`
-        
+
         # Arguments:
             inf_xy_provider: infinite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of different samples provided by infinite generator `xy_provider`.
@@ -430,7 +436,12 @@ class ImageMaskGenerator(ImageDataGenerator):
             batch_size=4,
             verbose=1)
 
-    val_gen = ImageMaskGenerator() # Just an infinite image/mask generator
+    val_gen = ImageDataGenerator(featurewise_center=True,
+                                 featurewise_std_normalization=True) # Just an infinite image/mask generator
+
+    val_gen.mean = train_gen.mean
+    val_gen.std = train_gen.std
+    val_gen.principal_components = train_gen.principal_components
 
     history = model.fit_generator(
         train_gen.flow(xy_provider(train_image_ids), # Infinite generator is used

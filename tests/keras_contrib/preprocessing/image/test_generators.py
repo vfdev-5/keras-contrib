@@ -7,7 +7,10 @@ from keras.utils.test_utils import keras_test
 
 from keras_contrib.preprocessing.image.generators import ImageMaskGenerator, ImageDataGenerator
 
+# Image/mask
 from .test_iterators import random_provider, example_images_mean_std, example_provider_th
+# Image/target
+from .test_iterators import random_provider_2, example_provider_th_2
 
 
 def _test_image_mask_generator(gen):
@@ -30,7 +33,7 @@ def _test_image_data_generator(gen):
     batch_size = 16
 
     counter = 0
-    for x, y in gen.flow(random_provider(n_samples, image_shape), n_samples, batch_size=batch_size):
+    for x, y in gen.flow(random_provider_2(n_samples, image_shape), n_samples, batch_size=batch_size):
         counter += batch_size
         assert x.shape[0] == batch_size
         assert x.shape[1:] == image_shape
