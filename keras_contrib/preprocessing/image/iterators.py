@@ -9,16 +9,18 @@ from keras import backend as K
 
 class ImageDataIterator(Iterator):
     """
-    Generate minibatches of image and targets data. Similar to keras `NumpyArrayIterator`, `DirectoryIterator`, but data is
-    provided by a user-written generator function. This iterator is used to flow data in batches and optionally transform with
-    a `image_data_generator`.
+    Generate minibatches of image and targets data. Similar to keras `NumpyArrayIterator`, `DirectoryIterator`, but data
+    is provided by a user-written generator function. This iterator is used to flow data in batches and optionally
+    transform with a `image_data_generator`.
 
     # Arguments
-        xy_provider: infinite or finite generator function that provides image and target data with `yield`, e.g. `yield X, Y`.
+        xy_provider: infinite or finite generator function that provides image and target data with `yield`, e.g.
+        `yield X, Y`.
         Optionally, `xy_provider` can yield (x, y, additional_info), for example if some data identification is needed.
         Provided X should be 3D ndarrays of shape corresponding to `data_format`. There are no restrictions on Y type.
         See example below.
-        n: total number of different samples (images and targets) provided by `xy_provider`, even if generator is infinite.
+        n: total number of different samples (images and targets) provided by `xy_provider`, even if generator is
+        infinite.
         image_data_generator: instance of ImageDataGenerator.
         Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
     

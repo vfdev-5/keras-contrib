@@ -43,22 +43,22 @@ class ImageDataGenerator(KerasImageDataGenerator):
                 return
 
     train_gen = ImageDataGenerator(pipeline=('random_transform', 'standardize'),
-                                  featurewise_center=True,
-                                  featurewise_std_normalization=True,
-                                  rotation_range=90.,
-                                  width_shift_range=0.15, height_shift_range=0.15,
-                                  shear_range=3.14/6.0,
-                                  zoom_range=0.25,
-                                  channel_shift_range=0.1,
-                                  horizontal_flip=True,
-                                  vertical_flip=True)
+                             featurewise_center=True,
+                             featurewise_std_normalization=True,
+                             rotation_range=90.,
+                             width_shift_range=0.15, height_shift_range=0.15,
+                             shear_range=3.14/6.0,
+                             zoom_range=0.25,
+                             channel_shift_range=0.1,
+                             horizontal_flip=True,
+                             vertical_flip=True)
     
     train_gen.fit(xy_provider(train_image_ids, infinite=False),
-                 len(train_image_ids),
-                 augment=True,
-                 save_to_dir=GENERATED_DATA,
-                 batch_size=4,
-                 verbose=1)
+            len(train_image_ids),
+            augment=True,
+            save_to_dir=GENERATED_DATA,
+            batch_size=4,
+            verbose=1)
 
     val_gen = ImageDataGenerator(featurewise_center=True,
                                  featurewise_std_normalization=True) # Just an infinite image/mask generator
@@ -297,6 +297,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
                     return
                 # Remove existing file
                 os.remove(filename)
+
         if not self.featurewise_center and not self.featurewise_std_normalization and not self.zca_whitening:
             return
 
@@ -330,7 +331,6 @@ class ImageDataGenerator(KerasImageDataGenerator):
             _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
         counter += 1
 
-            
         for ret in xy_iterator:
             if verbose == 1:
                 progbar.update(counter*batch_size)
@@ -367,14 +367,10 @@ class ImageDataGenerator(KerasImageDataGenerator):
             u, s, _ = linalg.svd(sigma)
             self.principal_components = np.dot(np.dot(u, np.diag(1. / np.sqrt(s + K.epsilon()))), u.T)
 
-        
+
         if augment:
             # Restore pipeline to the initial
             self._pipeline = pipeline
-            
-        if save_to_dir is not None:
-            filename = _get_save_filename()
-            np.savez_compressed(filename, mean=self.mean, std=self.std, principal_components=self.principal_components)
 
         if save_to_dir is not None:
             filename = _get_save_filename()
