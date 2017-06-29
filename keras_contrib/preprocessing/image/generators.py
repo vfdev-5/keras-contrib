@@ -32,6 +32,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
     ```
     def xy_provider(image_ids, infinite=True):
         while True:
+            np.random.shuffle(image_ids)
             for image_id in image_ids:
                 image = load_image(image_id)
                 target = load_target(image_id)
@@ -254,6 +255,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
             save_to_dir=None,
             save_prefix='',
             save_format='npz',
+            featurewise_full=False,
             verbose=0):
         """Fits internal statistics to some sample data.
 
@@ -261,7 +263,10 @@ class ImageDataGenerator(KerasImageDataGenerator):
             xy_provider: finite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of samples provided by xy_provider
             See `XYIterator` for more details. No restrictions on number of channels.
+            featurewise_full: if True then mean and std are images, otherwise mean and std are scalars
+            (for each channel)
             Other arguments are inherited from keras.preprocessing.image.ImageDataGenerator
+
 
             Some of the code is copied from `fit` method of ImageDataGenerator
             https://github.com/fchollet/keras/blob/b4f7340cc9be4ce23c768c26a612df287c5bb883/keras/preprocessing/image.py
@@ -322,10 +327,16 @@ class ImageDataGenerator(KerasImageDataGenerator):
             progbar.update(counter*batch_size)
         ret = next(xy_iterator)
         x = ret[0].astype(np.float64)
-        ll = n_samples * x.shape[self.row_axis] * x.shape[self.col_axis]
+        ll = n_samples
+        if not featurewise_full:
+            ll *= x.shape[self.row_axis] * x.shape[self.col_axis]
+            axis = (0, self.row_axis, self.col_axis)
+        else:
+            axis = 0
+
         if self.featurewise_center or self.featurewise_std_normalization:
-            self.mean = np.sum(x, axis=(0, self.row_axis, self.col_axis)) * 1.0 / ll
-            self.std = np.sum(np.power(x, 2.0), axis=(0, self.row_axis, self.col_axis)) * 1.0 / ll
+            self.mean = np.sum(x, axis=axis) * 1.0 / ll
+            self.std = np.sum(np.power(x, 2.0), axis=axis) * 1.0 / ll
         if self.zca_whitening:
             _total_x = np.zeros((n_samples, ) + x.shape[1:], dtype=K.floatx())
             _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
@@ -336,8 +347,8 @@ class ImageDataGenerator(KerasImageDataGenerator):
                 progbar.update(counter*batch_size)
             x = ret[0].astype(np.float64)
             if self.featurewise_center or self.featurewise_std_normalization:
-                self.mean += np.sum(x, axis=(0, self.row_axis, self.col_axis)) * 1.0 / ll
-                self.std += np.sum(np.power(x, 2.0), axis=(0, self.row_axis, self.col_axis)) * 1.0 / ll
+                self.mean += np.sum(x, axis=axis) * 1.0 / ll
+                self.std += np.sum(np.power(x, 2.0), axis=axis) * 1.0 / ll
             if self.zca_whitening:
                 _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
             counter += 1
@@ -366,7 +377,6 @@ class ImageDataGenerator(KerasImageDataGenerator):
             sigma = np.dot(flat_x.T, flat_x) / flat_x.shape[0]
             u, s, _ = linalg.svd(sigma)
             self.principal_components = np.dot(np.dot(u, np.diag(1. / np.sqrt(s + K.epsilon()))), u.T)
-
 
         if augment:
             # Restore pipeline to the initial
@@ -409,6 +419,7 @@ class ImageMaskGenerator(ImageDataGenerator):
     ```
     def xy_provider(image_ids, infinite=True):
         while True:
+            np.random.shuffle(image_ids)
             for image_id in image_ids:
                 image = load_image(image_id)
                 mask = load_mask(image_id)
@@ -479,7 +490,11 @@ class ImageMaskGenerator(ImageDataGenerator):
             A transformed version of the inputs (same shape).
         """
         xt = x.copy().astype(K.floatx())
-        yt = y.copy().astype(K.floatx())
+        # Y can be None if ImageMaskGenerator is used to iterate over test data with augmentations
+        if y is not None:
+            yt = y.copy().astype(K.floatx())
+        else:
+            yt = y
         for t in self._pipeline:
             xt, yt = t(xt, yt)
         return xt, yt
