@@ -262,7 +262,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
         # Arguments
             xy_provider: finite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of samples provided by xy_provider
-            See `XYIterator` for more details. No restrictions on number of channels.
+            See `ImageDataIterator` for more details. No restrictions on number of channels.
             featurewise_full: if True then mean and std are images, otherwise mean and std are scalars
             (for each channel)
             Other arguments are inherited from keras.preprocessing.image.ImageDataGenerator
@@ -393,7 +393,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
         # Arguments:
             inf_xy_provider: infinite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of different samples provided by infinite generator `xy_provider`.
-            See `XYIterator` for more details. No restrictions on number of channels.
+            See `ImageDataIterator` for more details. No restrictions on number of channels.
 
         Override this method when inherits of  ImageDataGenerator
         """
@@ -413,7 +413,7 @@ class ImageMaskGenerator(ImageDataGenerator):
         Other parameters are inherited from keras.preprocessing.image.ImageDataGenerator
 
     Methods `flow`, `fit` take as input a generator function `xy_provider` which "yields" x, y.
-    See `XYIterator` for more details.
+    See `ImageDataIterator` for more details.
 
     Usage:
     ```
@@ -512,7 +512,7 @@ class ImageMaskGenerator(ImageDataGenerator):
         # Arguments:
             inf_xy_provider: infinite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of different samples provided by infinite generator `xy_provider`.
-            See `XYIterator` for more details. No restrictions on number of channels.
+            See `ImageDataIterator` for more details. No restrictions on number of channels.
         
         """
         return ImageMaskIterator(inf_xy_provider, n_samples, self, data_format=self.data_format, **kwargs)
