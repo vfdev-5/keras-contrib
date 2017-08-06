@@ -23,8 +23,8 @@ class ImageDataIterator(Iterator):
         infinite.
         image_data_generator: instance of ImageDataGenerator.
         Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
-    
-    Example, a finite xy_provider 
+
+    Example, a finite xy_provider
     ```
     def xy_provider(image_ids):
         for image_id in image_ids:
@@ -71,7 +71,7 @@ class ImageDataIterator(Iterator):
                 data_format = "channels_last" if K.image_dim_ordering() == "tf" else "channels_first"
             else:
                 data_format = K.image_data_format()
-        
+
         ret = next(xy_provider)
         assert isinstance(ret, list) or isinstance(ret, tuple) and 2 <= len(ret) <= 3, \
             "Generator xy_provider should yield a list/tuple of (image, mask) or (image, mask, info)"
@@ -106,11 +106,11 @@ class ImageDataIterator(Iterator):
 
     def _empty_process(self, img, target):
         return img, target
-            
+
     def _default_image_data_generator_process(self, img, target):
         img = self.image_data_generator.random_transform(img)
         return self.image_data_generator.standardize(img), target
-    
+
     def _check_x_format(self, x, **kwargs):
         ImageDataIterator._check_img_format(x, **kwargs)
 
@@ -120,7 +120,7 @@ class ImageDataIterator(Iterator):
         # Override this method when inherits of ImageDataIterator
         #
         assert isinstance(y, np.ndarray) and len(y.shape) == 1, "Y should be an ndarray, one-hot encoded vector"
-    
+
     def _create_y_batch(self, current_batch_size, x, y):
         # Method to create a batch of y targets
         # Assume that y is one-hot encoded
@@ -128,7 +128,7 @@ class ImageDataIterator(Iterator):
         # Override this method when inherits of ImageDataIterator
         #
         return np.zeros((current_batch_size, ) + y.shape, dtype=y.dtype)
-        
+
     @staticmethod
     def _check_img_format(img, data_format):
         assert len(img.shape) == 3, "Image should be a 3D ndarray"
@@ -181,17 +181,16 @@ class ImageDataIterator(Iterator):
 class ImageMaskIterator(ImageDataIterator):
     """
     Generate minibatches of image and mask. All arguments inherited from ImageDataIterator.
-    
-    xy_provider: infinite or finite generator function that provides image and mask with `yield`, e.g. `yield X, Y`. 
+    xy_provider: infinite or finite generator function that provides image and mask with `yield`, e.g. `yield X, Y`.
     Optionally, `xy_provider` can yield (x, y, additional_info), for example if some data identification is needed.
     Provided X, Y data should be 3D ndarrays of shape corresponding to `data_format`.
     See example below.
-    
+
     n: total number of different samples (images and masks) provided by `xy_provider`, even if generator is infinite.
     image_data_generator: instance of ImageDataGenerator.
     Other parameters are inherited from keras.preprocessing.image.Iterator and NumpyArrayIterator
-    
-    Example, a finite xy_provider 
+
+    Example, a finite xy_provider
     ```
     def xy_provider(image_ids):
         for image_id in image_ids:
@@ -207,8 +206,8 @@ class ImageMaskIterator(ImageDataIterator):
             # Or optionally:
             # yield image, mask, image_id
     ```
-    
-    Example, an infinite xy_provider 
+
+    Example, an infinite xy_provider
     ```
     def inf_xy_provider(image_ids):
         while 1:
@@ -225,7 +224,6 @@ class ImageMaskIterator(ImageDataIterator):
                 # Or optionally:
                 # yield image, mask, image_id
     ```
-
     """
 
     def __init__(self, *args, **kwargs):
@@ -236,6 +234,6 @@ class ImageMaskIterator(ImageDataIterator):
 
     def _check_y_format(self, y, **kwargs):
         ImageDataIterator._check_img_format(y, **kwargs)
-        
+
     def _create_y_batch(self, current_batch_size, x, y):
         return np.zeros((current_batch_size,) + y.shape, dtype=K.floatx())

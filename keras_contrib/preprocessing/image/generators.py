@@ -53,7 +53,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
                              channel_shift_range=0.1,
                              horizontal_flip=True,
                              vertical_flip=True)
-    
+
     train_gen.fit(xy_provider(train_image_ids, infinite=False),
             len(train_image_ids),
             augment=True,
@@ -324,7 +324,7 @@ class ImageDataGenerator(KerasImageDataGenerator):
 
         counter = 0
         if verbose == 1:
-            progbar.update(counter*batch_size)
+            progbar.update(counter * batch_size)
         ret = next(xy_iterator)
         x = ret[0].astype(np.float64)
         ll = n_samples
@@ -339,18 +339,18 @@ class ImageDataGenerator(KerasImageDataGenerator):
             self.std = np.sum(np.power(x, 2.0), axis=axis) * 1.0 / ll
         if self.zca_whitening:
             _total_x = np.zeros((n_samples, ) + x.shape[1:], dtype=K.floatx())
-            _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
+            _total_x[counter * batch_size:(counter + 1) * batch_size, :, :, :] = x
         counter += 1
 
         for ret in xy_iterator:
             if verbose == 1:
-                progbar.update(counter*batch_size)
+                progbar.update(counter * batch_size)
             x = ret[0].astype(np.float64)
             if self.featurewise_center or self.featurewise_std_normalization:
                 self.mean += np.sum(x, axis=axis) * 1.0 / ll
                 self.std += np.sum(np.power(x, 2.0), axis=axis) * 1.0 / ll
             if self.zca_whitening:
-                _total_x[counter*batch_size:(counter+1)*batch_size, :, :, :] = x
+                _total_x[counter * batch_size:(counter + 1) * batch_size, :, :, :] = x
             counter += 1
             if counter > n_samples:
                 print("Warning. Data provider `xy_iterator` yields more samples than `n_samples`")
@@ -408,7 +408,7 @@ class ImageMaskGenerator(ImageDataGenerator):
         pipeline: list of functions or str to specify transformations to apply on image.
         Each function should take as input x, y and return transformed x, y. Arguments x, y are 3D tensors,
         single image and single mask. Recognized `str` transformations : 'standardize', 'random_transform'.
-        Transformations like 'standardize', 'random_channel_shift' are not applied to the mask.        
+        Transformations like 'standardize', 'random_channel_shift' are not applied to the mask.
 
         Other parameters are inherited from keras.preprocessing.image.ImageDataGenerator
 
@@ -428,22 +428,22 @@ class ImageMaskGenerator(ImageDataGenerator):
                 # ...
                 yield image, mask
             if not infinite:
-                return 
-    
+                return
+
     train_gen = ImageMaskGenerator(pipeline=('random_transform', 'standardize'),
                              featurewise_center=True,
                              featurewise_std_normalization=True,
-                             rotation_range=90., 
+                             rotation_range=90.,
                              width_shift_range=0.15, height_shift_range=0.15,
                              shear_range=3.14/6.0,
                              zoom_range=0.25,
                              channel_shift_range=0.1,
                              horizontal_flip=True,
                              vertical_flip=True)
-    
+
     train_gen.fit(xy_provider(train_image_ids, infinite=False),
-            len(train_image_ids), 
-            augment=True, 
+            len(train_image_ids),
+            augment=True,
             save_to_dir=GENERATED_DATA,
             batch_size=4,
             verbose=1)
@@ -513,6 +513,5 @@ class ImageMaskGenerator(ImageDataGenerator):
             inf_xy_provider: infinite generator function that yields two 3D ndarrays image and mask of the same size.
             n_samples: number of different samples provided by infinite generator `xy_provider`.
             See `ImageDataIterator` for more details. No restrictions on number of channels.
-        
         """
         return ImageMaskIterator(inf_xy_provider, n_samples, self, data_format=self.data_format, **kwargs)

@@ -1,5 +1,4 @@
 
-from __future__ import absolute_import
 import pytest
 
 from numpy.testing import assert_allclose
@@ -10,7 +9,7 @@ from keras_contrib.preprocessing.image.generators import ImageMaskGenerator, Ima
 # Image/mask
 from .test_iterators import random_provider, example_images_mean_std, example_provider_th
 # Image/target
-from .test_iterators import random_provider_2, example_provider_th_2
+from .test_iterators import random_provider_2
 
 
 def _test_image_mask_generator(gen):
@@ -65,7 +64,6 @@ def _test_image_mask_generator_with_fit(gen, augment, n_samples=128, batch_size=
         assert_allclose(x, y)
         assert x.shape[0] == batch_size
     assert counter == n_samples
-
 
 
 @keras_test
@@ -150,7 +148,7 @@ def test_image_mask_generator_all_random_transformations():
                              zoom_range=0.5,
                              width_shift_range=0.2,
                              height_shift_range=0.2,
-                             shear_range=3.14/6.0,
+                             shear_range=3.14 / 6.0,
                              horizontal_flip=True,
                              vertical_flip=True,
                              data_format='channels_first')
@@ -173,6 +171,7 @@ def test_image_mask_generator_with_fit():
     #                          data_format='channels_first')
     # _test_image_mask_generator_with_fit(gen, augment=False, n_samples=10)
     # _test_image_mask_generator_with_fit(gen, augment=True)
+
 
 @keras_test
 def test_image_mask_generator_invalid_data():

@@ -43,7 +43,7 @@ def example_provider_th_2(n):
 
 
 def example_image(i):
-    img = (i+1) * np.ones((2, 128, 130), dtype=np.float32)
+    img = (i + 1) * np.ones((2, 128, 130), dtype=np.float32)
     img[0, :64, :65] = 0
     img[1, 64:, 65:] = 0
     return img
