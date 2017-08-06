@@ -1,3 +1,14 @@
+# Fork of keras-contrib : Keras community contributions
+[![Build Status](https://travis-ci.org/vfdev-5/keras-contrib.svg?branch=master)](https://travis-ci.org/vfdev-5/keras-contrib)
+
+Added : 
+- [preprocessing.image.generators.ImageDataGenerator](https://github.com/vfdev-5/keras-contrib/blob/master/keras_contrib/preprocessing/image/generators.py#L17)
+- [preprocessing.image.generators.ImageMaskGenerator](https://github.com/vfdev-5/keras-contrib/blob/master/keras_contrib/preprocessing/image/generators.py#L403)
+  - See [this example](https://github.com/vfdev-5/keras-contrib/blob/master/examples/examples_preprocessing_ImageMaskGenerator.ipynb) for more details 
+
+
+--- 
+
 # keras-contrib : Keras community contributions
 
 [![Build Status](https://travis-ci.org/farizrahman4u/keras-contrib.svg?branch=master)](https://travis-ci.org/farizrahman4u/keras-contrib)
